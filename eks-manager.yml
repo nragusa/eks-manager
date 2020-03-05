@@ -1,0 +1,268 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Launch an EC2 instance that can be used to provision an EKS
+  cluster and deploy SQL Server 2019 Big Data Cluster to
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - 
+        Label:
+          default: VPC Settings
+        Parameters:
+          - VpcId
+          - SubnetId
+      - 
+        Label:
+          default: EC2 Settings
+        Parameters:
+          - InstanceName
+          - InstanceType
+          - ImageId
+          - Environment
+
+Parameters:
+  InstanceName:
+    Type: String
+    Description: Provide an EC2 instance name
+    Default: eks-manager
+ 
+  InstanceType:
+    Type: String
+    Description: Provide an EC2 instance type
+    Default: t3.small
+    AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.large
+
+  ImageId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+ 
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Provide the VPC in which to create resources
+ 
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Provide the public subnet in which to launch the instance
+
+  Environment:
+    Type: String
+    Description: Provide environment info (Dev, Test, Production)
+    AllowedValues:
+      - Dev
+      - Test
+      - Production
+    ConstraintDescription: Provide staging info (Dev, Test, Production)
+    Default: Dev
+
+Resources:
+  # A managed policy to provide access to creating an EKS cluster
+  # and adding EC2 nodes to the cluster. The permissions here are
+  # needed for the eksctl script: https://eksctl.io/
+  ManagedPolicyEKSClusterCreation:
+    Type: AWS::IAM::ManagedPolicy
+    Properties: 
+      Description: Provides access to create a functional EKS cluster with EC2 nodes into an existing VPC
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: EC2Describe
+            Effect: Allow
+            Action:
+              - ec2:DescribeKeyPairs
+              - ec2:DescribeRegions
+              - ec2:DescribeVpcs
+              - ec2:DescribeSubnets
+              - ec2:DescribeSecurityGroups
+              - ec2:DescribePlacementGroups
+              - ec2:DescribeImages
+              - ec2:DescribeInstances
+              - ec2:DescribeInstanceStatus
+              - ec2:DescribeSnapshots
+              - ec2:DescribeVolumes
+              - ec2:DescribeVpcAttribute
+              - ec2:DescribeAddresses
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DescribeAvailabilityZones
+            Resource: "*"
+          - Sid: EKSDescribe
+            Effect: Allow
+            Action:
+              - eks:DescribeCluster
+              - eks:DescribeNodegroup
+            Resource: "*"
+          - Sid: EKSModify
+            Effect: Allow
+            Action:
+              - eks:CreateCluster
+              - eks:TagResource
+              - eks:UntagResource
+              - eks:CreateNodegroup
+              - eks:DeleteCluster
+              - eks:DeleteNodegroup
+              - eks:UpdateClusterConfig
+              - eks:UpdateClusterVersion
+              - eks:UpdateNodegroupConfig
+              - eks:UpdateNodegroupVersion
+            Resource: "*"
+          - Sid: EC2Modify
+            Effect: Allow
+            Action:
+              - ec2:CreateTags
+              - ec2:CreateVolume
+              - ec2:RunInstances
+              - ec2:AllocateAddress
+              - ec2:AssociateAddress
+              - ec2:AttachNetworkInterface
+              - ec2:AuthorizeSecurityGroupEgress
+              - ec2:AuthorizeSecurityGroupIngress
+              - ec2:CreateNetworkInterface
+              - ec2:CreateSecurityGroup
+              - ec2:ModifyVolumeAttribute
+              - ec2:ModifyNetworkInterfaceAttribute
+              - ec2:DeleteNetworkInterface
+              - ec2:DeleteVolume
+              - ec2:TerminateInstances
+              - ec2:DeleteSecurityGroup
+              - ec2:DisassociateAddress
+              - ec2:RevokeSecurityGroupIngress
+              - ec2:RevokeSecurityGroupEgress
+              - ec2:ReleaseAddress
+              - ec2:CreatePlacementGroup
+              - ec2:DeletePlacementGroup
+            Resource: "*"
+          - Sid: IAMRead
+            Effect: Allow
+            Action:
+              - iam:GetRole
+              - iam:GetRolePolicy
+              - iam:GetOpenIDConnectProvider
+            Resource: "*"
+          - Sid: IAMModify
+            Effect: Allow
+            Action:
+              - iam:TagRole
+              - iam:UntagRole
+              - iam:AttachRolePolicy
+              - iam:ListAttachedRolePolicies
+              - iam:DetachRolePolicy
+              - iam:PutRolePolicy
+              - iam:DeleteRolePolicy
+              - iam:CreateRole
+              - iam:DeleteRole
+              - iam:PassRole
+              - iam:CreateInstanceProfile
+              - iam:AddRoleToInstanceProfile
+              - iam:DeleteInstanceProfile
+            Resource: "*"
+          - Sid: CloudFormationRead
+            Effect: Allow
+            Action:
+              - cloudformation:ListStacks
+              - cloudformation:DescribeStacks
+            Resource: "*"
+          - Sid: CloudFormationModify
+            Effect: Allow
+            Action:
+              - cloudformation:TagResource
+              - cloudformation:UntagResource
+              - cloudformation:CreateStack
+              - cloudformation:DeleteStack
+              - cloudformation:UpdateStack
+            Resource: "*"
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - !Ref ManagedPolicyEKSClusterCreation
+      Tags:
+        - Key: Role
+          Value: !Join
+            - " "
+            - - !Ref InstanceName
+              - instance profile role
+        - Key: Environment
+          Value: !Ref Environment
+ 
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+ 
+  Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      SecurityGroupIds:
+        - !GetAtt SecurityGroup.GroupId
+      SubnetId: !Ref SubnetId
+      Tags:
+        - Key: Name
+          Value: !Ref InstanceName
+        - Key: Environment
+          Value: !Ref Environment
+      UserData:
+        Fn::Base64: !Sub |
+          #cloud-config
+          
+          package_update: true
+          package_upgrade: true
+          packages:
+            - python3
+            - unixODBC
+            - unixODBC-devel
+            - gcc
+            - krb5-devel
+            - gcc-c++
+            - python3-devel
+            - jq
+          runcmd:
+            - su --login ec2-user -c "pip3 install wheel --user"
+            - su --login ec2-user -c "pip3 install -r https://aka.ms/azdata --user"
+            - curl --silent --location "https://github.com/weaveworks/eksctl/releases/download/latest_release/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+            - mv /tmp/eksctl /usr/local/bin
+            - echo ". <(eksctl completion bash)" >> /home/ec2-user/.bashrc
+            - curl --silent -o /usr/local/bin/kubectl https://amazon-eks.s3-us-west-2.amazonaws.com/1.14.6/2019-08-22/bin/linux/amd64/kubectl
+            - chmod +x /usr/local/bin/kubectl
+ 
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Join
+        - " "
+        - - !Ref InstanceName
+          - management instance
+      Tags:
+        - Key: Name
+          Value: !Join
+            - " "
+            - - !Ref InstanceName
+              - management instance
+        - Key: Environment
+          Value: !Ref Environment
+      VpcId: !Ref VpcId
+         
+Outputs:
+  InstanceId:
+    Description: EC2 instance ID
+    Value: !Ref Instance
+   
+  SecurityGroupId:
+    Description: Security Group
+    Value: !GetAtt SecurityGroup.GroupId
