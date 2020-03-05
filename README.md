@@ -17,3 +17,20 @@ The first step is to deploy a stack using the provided CloudFormation template. 
 | us-east-2 | [![Launch Stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/new?stackName=eks-manager&templateURL=https://ragusan-cloudformation.s3.amazonaws.com/eks-manager.yml) |
 
 
+There are 2 parameters that must be filled in that are specific to your environment:
+
+![Parameters](images/parameters.png)
+
+The remaining parameters have suitable defaults.
+
+### Connect to the Instance
+
+To connect to the EC2 instance, use [Systems Manager Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager.html).
+
+![Session manager](images/ssm.gif)
+
+In your AWS account:
+1) Go to the EC2 console and find the instance named `eks-manager` (or the whatever instance name you gave it) 
+2) Click the __Connect__ button at the top
+3) Select the __Session Manager__ radio button
+4) Click the blue __Connect__ button
