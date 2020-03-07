@@ -67,6 +67,12 @@ Be sure to replace `vpc-public-subnets` and `vpc-private-subnets` with values fr
 
 This process can take 30 or more minutes to complete. You can check the progress of the command by logging in to the CloudFormation console and checking on the stack deployment progress.
 
+### Secure EKS Nodes
+
+By default, the EKS nodes have a security group that allows SSH from `0.0.0.0/0`. Change this to a more sensible value, or remove access completely. The nodes will be in a security group called *eks-remoteAccess-XXX*.
+
+![Remove SSH Access](images/sg.gif)
+
 ### Launch a Big Data Cluster
 
 Once the cluster is up and running, you can now deploy Microsoft SQL Server 2019 Big Data Cluster using the pre-installed `azdata` tool. An example command:
