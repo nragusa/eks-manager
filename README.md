@@ -80,3 +80,4 @@ Once the cluster is up and running, you can now deploy Microsoft SQL Server 2019
 ```
 azdata bdc create --accept-eula=yes
 ```
+![azdata wizard](images/bdc.png)
