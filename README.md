@@ -78,3 +78,13 @@ azdata bdc create --accept-eula=yes
 ![azdata wizard](images/bdc2.png)
 
 As the Big Data cluster is deployed, it will output the IP for the cluster endpoint. You'll need this for connecting to the cluster, so make sure you leave this window open!
+
+### Connect to the BDC
+
+Once the BDC deployment completes, you can connect to the cluster with `azdata`. Using the endpoint that was echoed during the deployment, run the following:
+
+```
+azdata login --endpoint https://<ip or domain name>:30080
+```
+
+and specify the username / password combination you specified when you created the cluster.
