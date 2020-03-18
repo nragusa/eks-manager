@@ -37,27 +37,19 @@ In your AWS account:
 
 ### Create EKS Cluster
 
-There is a tool installed on the EC2 instance called `eksctl` which will be used to create an EKS cluster. Before we run the `eksctl` tool, we need to get the security group ID of our instance:
-
-```
-export SG="$(curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/$(curl -s http://169.254.169.254/latest/meta-data/mac)/security-group-ids)"
-```
+There is a tool installed on the EC2 instance called `eksctl` which will be used to create an EKS cluster. 
 
 Now we can use the output from above when we create our EKS cluster:
 ```
 eksctl create cluster \
     --name bdc \
-    --version 1.14 \
     --region us-east-1 \
-    --nodegroup-name workers \
-    --node-type m5.large \
+    --tags "Environment=Dev,Project=BigDataCluster,Name=bdc-node" \
+    --version 1.15 \
     --nodes 3 \
-    --nodes-min 3 \
-    --nodes-max 3 \
+    --node-type m5.large \
+    --nodegroup-name workers \
     --node-volume-size 100 \
-    --node-security-groups $SG \
-    --ssh-access \
-    --ssh-public-key bdc \
     --vpc-public-subnets=subnet-XXXXXX,subnet-XXXXXX,subnet-XXXXXX \
     --vpc-private-subnets=subnet-XXXXXX,subnet-XXXXXX,subnet-XXXXXX \
     --managed
@@ -67,11 +59,14 @@ Be sure to replace `vpc-public-subnets` and `vpc-private-subnets` with values fr
 
 This process can take 30 or more minutes to complete. You can check the progress of the command by logging in to the CloudFormation console and checking on the stack deployment progress.
 
-### Secure EKS Nodes
+### Allow Access to Pods
 
-By default, the EKS nodes have a security group that allows SSH from `0.0.0.0/0`. Change this to a more sensible value, or remove access completely. The nodes will be in a security group called *eks-remoteAccess-XXX*.
+You'll want to add the security group of this instance to the security group of the nodegroup. 
+1) Go to the EC2 console and select any one of the nodes (should be named `bdc-node`)
+2) Click on the security group. It should be named something like `eks-cluster-bdc-sg-XXXX`.
+3) Add a new inbound rule to allow *All traffic* from the security group of the EKS manager instance.
 
-![Remove SSH Access](images/sg.gif)
+![Security Group](images/sg.gif)
 
 ### Launch a Big Data Cluster
 
@@ -81,3 +76,5 @@ Once the cluster is up and running, you can now deploy Microsoft SQL Server 2019
 azdata bdc create --accept-eula=yes
 ```
 ![azdata wizard](images/bdc2.png)
+
+As the Big Data cluster is deployed, it will output the IP for the cluster endpoint. You'll need this for connecting to the cluster, so make sure you leave this window open!

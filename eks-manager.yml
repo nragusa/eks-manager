@@ -141,6 +141,13 @@ Resources:
               - iam:GetRolePolicy
               - iam:GetOpenIDConnectProvider
             Resource: "*"
+          - Sid: SSMRead
+            Effect: Allow
+            Action:
+              - ssm:DescribeParameters
+              - ssm:GetParameter
+              - ssm:GetParameters
+            Resource: "*"
           - Sid: IAMModify
             Effect: Allow
             Action:
@@ -172,6 +179,10 @@ Resources:
               - cloudformation:CreateStack
               - cloudformation:DeleteStack
               - cloudformation:UpdateStack
+              - cloudformation:GetTemplate
+              - cloudformation:DescribeStackResources
+              - cloudformation:CreateChangeSet
+              - cloudformation:DescribeStackEvents
             Resource: "*"
   InstanceRole:
     Type: AWS::IAM::Role
