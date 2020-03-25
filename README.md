@@ -39,7 +39,6 @@ In your AWS account:
 
 There is a tool installed on the EC2 instance called `eksctl` which will be used to create an EKS cluster. 
 
-Now we can use the output from above when we create our EKS cluster:
 ```
 eksctl create cluster \
     --name bdc \
