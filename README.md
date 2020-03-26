@@ -65,16 +65,7 @@ eksctl create cluster \
 
 Be sure to replace `vpc-private-subnets` and `ssh-public-key` with values from your environment!
 
-This process can take 30 or more minutes to complete. You can check the progress of the command by logging in to the CloudFormation console and checking on the stack deployment progress.
-
-### Allow Access to Pods
-
-You'll want to add the security group of this instance to the security group of the nodegroup. 
-1) Go to the EC2 console and select any one of the nodes (should be named `bdc-node`)
-2) Click on the security group. It should be named something like `eks-cluster-bdc-sg-XXXX`.
-3) Add a new inbound rule to allow *All traffic* from the security group of the EKS manager instance.
-
-![Security Group](images/sg.gif)
+This process can take 15 or more minutes to complete. You can check the progress of the command by logging in to the CloudFormation console and checking on the stack deployment progress.
 
 ### Launch a Big Data Cluster
 
