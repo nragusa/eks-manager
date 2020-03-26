@@ -37,7 +37,14 @@ In your AWS account:
 
 ### Create EKS Cluster
 
-There is a tool installed on the EC2 instance called `eksctl` which will be used to create an EKS cluster. 
+There is a tool installed on the EC2 instance called `eksctl` which will be used to create an EKS cluster.Before we run the `eksctl` tool, we need to get the security group ID of our instance:
+
+
+```
+export SG="$(curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/$(curl -s http://169.254.169.254/latest/meta-data/mac)/security-group-ids)"
+```
+
+Now we can use the output from above when we create our EKS cluster:
 
 ```
 eksctl create cluster \
@@ -49,12 +56,14 @@ eksctl create cluster \
     --node-type m5.large \
     --nodegroup-name workers \
     --node-volume-size 100 \
-    --vpc-public-subnets=subnet-XXXXXX,subnet-XXXXXX,subnet-XXXXXX \
     --vpc-private-subnets=subnet-XXXXXX,subnet-XXXXXX,subnet-XXXXXX \
-    --managed
+    --node-private-networking \
+    --ssh-access \
+    --ssh-public-key XXXXX \
+    --node-security-groups $SG
 ```
 
-Be sure to replace `vpc-public-subnets` and `vpc-private-subnets` with values from your environment!
+Be sure to replace `vpc-private-subnets` and `ssh-public-key` with values from your environment!
 
 This process can take 30 or more minutes to complete. You can check the progress of the command by logging in to the CloudFormation console and checking on the stack deployment progress.
 

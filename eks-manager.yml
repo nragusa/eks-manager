@@ -18,6 +18,7 @@ Metadata:
         Parameters:
           - InstanceName
           - InstanceType
+          - KeyId
           - ImageId
           - Environment
 
@@ -35,6 +36,10 @@ Parameters:
       - t3.small
       - t3.medium
       - t3.large
+
+  KeyId:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: EC2 keypair for SSH access
 
   ImageId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
@@ -119,6 +124,7 @@ Resources:
               - ec2:AttachNetworkInterface
               - ec2:AuthorizeSecurityGroupEgress
               - ec2:AuthorizeSecurityGroupIngress
+              - autoscaling:CreateAutoScalingGroup 
               - ec2:CreateNetworkInterface
               - ec2:CreateSecurityGroup
               - ec2:ModifyVolumeAttribute
@@ -133,10 +139,38 @@ Resources:
               - ec2:ReleaseAddress
               - ec2:CreatePlacementGroup
               - ec2:DeletePlacementGroup
+              - ec2:ImportKeyPair
+            Resource: "*"
+          - Sid: AutoscalingEdit
+            Effect: Allow
+            Action:
+              - autoscaling:CreateLaunchConfiguration
+              - autoscaling:DeleteTags
+              - autoscaling:AttachInstances
+              - autoscaling:DeleteLaunchConfiguration
+              - autoscaling:CreateOrUpdateTags
+              - autoscaling:PutScalingPolicy
+              - autoscaling:UpdateAutoScalingGroup
+              - autoscaling:DeleteAutoScalingGroup
+              - autoscaling:CreateAutoScalingGroup
+              - autoscaling:DeletePolicy
+              - autoscaling:DetachInstances
+            Resource:
+              - "arn:aws:autoscaling:*:*:autoScalingGroup:*:autoScalingGroupName/*"
+              - "arn:aws:autoscaling:*:*:launchConfiguration:*:launchConfigurationName/*"
+          - Sid: AutoscalingRead
+            Effect: Allow
+            Action:
+              - autoscaling:DescribeAutoScalingGroups
+              - autoscaling:DescribePolicies
+              - autoscaling:DescribeLaunchConfigurations
+              - autoscaling:DescribeTags
+              - autoscaling:DescribeScalingActivities
             Resource: "*"
           - Sid: IAMRead
             Effect: Allow
             Action:
+              - iam:GetInstanceProfile
               - iam:GetRole
               - iam:GetRolePolicy
               - iam:GetOpenIDConnectProvider
@@ -164,6 +198,7 @@ Resources:
               - iam:CreateInstanceProfile
               - iam:AddRoleToInstanceProfile
               - iam:DeleteInstanceProfile
+              - iam:RemoveRoleFromInstanceProfile
             Resource: "*"
           - Sid: CloudFormationRead
             Effect: Allow
@@ -183,6 +218,27 @@ Resources:
               - cloudformation:DescribeStackResources
               - cloudformation:CreateChangeSet
               - cloudformation:DescribeStackEvents
+            Resource: "*"
+          - Sid: sts
+            Effect: Allow
+            Action:
+              - sts:DecodeAuthorizationMessage
+            Resource: "*"
+          - Sid: LaunchTemplateEdit
+            Effect: Allow
+            Action:
+              - ec2:DeleteLaunchTemplate
+              - ec2:ModifyLaunchTemplate
+              - ec2:DeleteLaunchTemplateVersions
+              - ec2:CreateLaunchTemplateVersion
+            Resource: "arn:aws:ec2:*:*:launch-template/*"
+          - Sid: LaunchTemplateRead
+            Effect: Allow
+            Action:
+              - ec2:CreateLaunchTemplate
+              - ec2:GetLaunchTemplateData
+              - ec2:DescribeLaunchTemplates
+              - ec2:DescribeLaunchTemplateVersions
             Resource: "*"
   InstanceRole:
     Type: AWS::IAM::Role
@@ -268,6 +324,14 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
       VpcId: !Ref VpcId
+
+  SecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow all traffic to instances within this group
+      GroupId: !GetAtt SecurityGroup.GroupId
+      IpProtocol: -1
+      SourceSecurityGroupId: !GetAtt SecurityGroup.GroupId
          
 Outputs:
   InstanceId:
