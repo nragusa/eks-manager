@@ -276,6 +276,7 @@ Resources:
       IamInstanceProfile: !Ref InstanceProfile
       ImageId: !Ref ImageId
       InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyId
       SecurityGroupIds:
         - !GetAtt SecurityGroup.GroupId
       SubnetId: !Ref SubnetId
